@@ -1,13 +1,14 @@
 (ns ummoi.core
-  (:require
-   [clojure.java.shell :as sh]
+  (:gen-class)
+  #_(:require
+   #_[clojure.java.shell :as sh]
    [tla-edn.core :as tla-edn]))
 
 #_(sh/sh)
 
-"um -cfg p.edn"
+#_"um -cfg p.edn"
 
-'{:operators
+#_'{:operators
   {"TransferMoney"
    {:args [x y z]
     :call {:type :shell
