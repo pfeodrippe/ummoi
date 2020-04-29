@@ -12,3 +12,7 @@
    {:args [x y z]
     :call {:type :shell
            :command ["bb" "a.clj" x y z]}}}}
+
+(defn -main
+  [& args]
+  (println "Hello, World!"))
