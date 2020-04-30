@@ -49,7 +49,7 @@
   [& [n]]
   #_(aaa n)
   #_(eval `(sss 3))
-  (eval `(sss 3 (tla-edn/to-tla-value {:c1 10 :c2 10})))
+  #_(eval `(sss 3 (tla-edn/to-tla-value {:c1 10 :c2 10})))
   #_(xxx n)
   (println :CLASSES @spec/classes-to-be-loaded)
   (println :LOADED_BEFORE? (spec/classes-loaded?))
