@@ -1,8 +1,9 @@
 (ns ummoi.core
   (:gen-class)
-  #_(:require
-   #_[clojure.java.shell :as sh]
-   [tla-edn.core :as tla-edn]))
+  (:require
+   [clojure.java.shell :as sh]
+   [tla-edn.core :as tla-edn]
+   [tla-edn.spec :as spec]))
 
 #_(sh/sh)
 
@@ -14,6 +15,12 @@
     :call {:type :shell
            :command ["bb" "a.clj" x y z]}}}}
 
+(spec/defop ex {:module "par"}
+  [olha eit])
+
 (defn -main
   [& args]
-  (println "Hello, World!"))
+  (spec/compile-operators 'ummoi.core)
+  #_(doall (repeatedly 20 #(spec/compile-operators 'ummoi.core)))
+  (println "Hello, World!")
+  (System/exit 0))
