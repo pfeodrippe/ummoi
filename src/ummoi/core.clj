@@ -16,11 +16,13 @@
            :command ["bb" "a.clj" x y z]}}}}
 
 (spec/defop ex {:module "par"}
-  [olha eit])
+  [olha eit ss])
 
 (defn -main
   [& args]
+  (println :LOADED? (spec/classes-loaded?))
   (spec/compile-operators 'ummoi.core)
-  #_(doall (repeatedly 20 #(spec/compile-operators 'ummoi.core)))
+  (println :LOADED? (spec/classes-loaded?))
+  (doall (repeatedly 20 #(spec/compile-operators 'ummoi.core)))
   (println "Hello, World!")
   (System/exit 0))
