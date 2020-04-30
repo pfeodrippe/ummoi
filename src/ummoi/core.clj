@@ -30,7 +30,7 @@
   [:c1 :c2 :account :receiver-new-amount :sender-new-amount :sender
    :receiver :money :pc])
 
-#_(sss 3
+(sss 3
      (tla-edn/to-tla-value {:c1 10 :c2 10}))
 
 (macroexpand-1
