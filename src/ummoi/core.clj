@@ -18,10 +18,22 @@
            :command ["bb" "a.clj" x y z]}}}}
 
 #_(spec/defop TransferMoney {:module "example"}
-  [olha])
+  [_ _ _ ])
+
+(defmacro sss
+  [n]
+  `(spec/defop ~'TransferMoney {:module "example"}
+     ~(vec (repeat n '_))))
+
+#_(defn aaa
+  [n]
+  (println :NNN n)
+  (eval ('list `sss n)))
 
 (defn -main
-  [& args]
+  [& [n]]
+  #_(aaa n)
+  (eval `(sss ~(bigdec n)))
   (println :CLASSES @spec/classes-to-be-loaded)
   (println :LOADED_BEFORE? (spec/classes-loaded?))
   (spec/compile-operators 'ummoi.core)
