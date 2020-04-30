@@ -3,7 +3,9 @@
   (:require
    [clojure.java.shell :as sh]
    [tla-edn.core :as tla-edn]
-   [tla-edn.spec :as spec]))
+   [tla-edn.spec :as spec])
+  (:import
+   (java.io File)))
 
 #_(sh/sh)
 
@@ -15,14 +17,17 @@
     :call {:type :shell
            :command ["bb" "a.clj" x y z]}}}}
 
-(spec/defop ex {:module "par"}
-  [olha eit ss])
+#_(spec/defop TransferMoney {:module "example"}
+  [olha])
 
 (defn -main
   [& args]
-  (println :LOADED? (spec/classes-loaded?))
+  (println :CLASSES @spec/classes-to-be-loaded)
+  (println :LOADED_BEFORE? (spec/classes-loaded?))
   (spec/compile-operators 'ummoi.core)
-  (println :LOADED? (spec/classes-loaded?))
-  (doall (repeatedly 20 #(spec/compile-operators 'ummoi.core)))
+  (println :LOADED_AFTER? (spec/classes-loaded?))
   (println "Hello, World!")
+  (spec/run-spec (.getAbsolutePath (File. "resources/example.tla"))
+                 "example.cfg"
+                 ["-workers" "1"])
   (System/exit 0))
