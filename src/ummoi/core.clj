@@ -24,7 +24,15 @@
 
 (spec/defop TransferMoney {:module "example"}
   [self account vars]
-  10)
+  (let [self (tla-edn/to-edn self)
+        vars (zipmap vars-keys (tla-edn/to-edn vars))
+        sender (get-in vars [:sender self])
+        receiver (get-in vars [:receiver self])
+        money (get-in vars [:money self])]
+    (-> (tla-edn/to-edn account)
+        (update sender - money)
+        (update receiver + money)
+        tla-edn/to-tla-value)))
 
 (defn -main
   []
