@@ -6,5 +6,7 @@
          :main-opts   ["-m" "kaocha.runner"]}}
 
  :deps {org.clojure/clojure {:mvn/version "1.10.1"}
-        pfeodrippe/tla-edn {:mvn/version "0.3.0"}}
+        pfeodrippe/tla-edn {:mvn/version "0.3.0"}
+        borkdude/deps.clj {:mvn/version "0.0.8"}
+        me.raynes/fs {:mvn/version "1.4.6"}}
  :paths ["src" "classes"]}
