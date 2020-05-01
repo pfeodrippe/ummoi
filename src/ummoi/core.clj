@@ -103,8 +103,6 @@
         deps-file (str path "/deps.edn")
         core-file (str path "/src/ummoi_runner/core.clj")]
     (pp-spit deps-file (deps-config path))
-    (fs/copy (io/resource "TLCOverrides.class")
-             (str path "/classes/tlc2/overrides/TLCOverrides.classs"))
     (spit core-file (core-form op-forms))
     #_(deps/-main "-m" "")
     (println :PATH path))
