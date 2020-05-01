@@ -27,7 +27,7 @@
   10)
 
 (defn -main
-  [& [n]]
+  []
   (spec/run-spec (.getAbsolutePath (File. "resources/example.tla"))
                  "example.cfg"
                  ["-workers" "1"])
