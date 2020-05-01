@@ -2,12 +2,13 @@
   #_(:gen-class)
   (:require
    [borkdude.deps :as deps]
+   [clojure.java.io :as io]
    [clojure.java.shell :as sh]
    [clojure.pprint :as pp]
+   [clojure.string :as str]
    [me.raynes.fs :as fs]
    [tla-edn.core :as tla-edn]
-   [tla-edn.spec :as spec]
-   [clojure.string :as str])
+   [tla-edn.spec :as spec])
   (:import
    (java.io File)))
 
@@ -98,9 +99,12 @@
   []
   (let [{:keys [:path]} (bean (fs/temp-dir "ummoi-"))
         _ (fs/mkdirs (str path "/src/ummoi_runner"))
+        _ (fs/mkdirs (str path "/classes/tlc2/overrides"))
         deps-file (str path "/deps.edn")
         core-file (str path "/src/ummoi_runner/core.clj")]
     (pp-spit deps-file (deps-config path))
+    (fs/copy (io/resource "TLCOverrides.class")
+             (str path "/classes/tlc2/overrides/TLCOverrides.classs"))
     (spit core-file (core-form op-forms))
     #_(deps/-main "-m" "")
     (println :PATH path))
