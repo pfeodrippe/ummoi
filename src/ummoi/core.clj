@@ -86,23 +86,24 @@
           (op-form {:name name :args args :module module}))
         (:operators ummoi-config)))
 
-(def deps-config
-  '{:deps {org.clojure/clojure {:mvn/version "1.10.1"}
-           pfeodrippe/tla-edn {:mvn/version "0.3.0"}}
-    :paths ["src" "classes"]})
+(defn deps-config
+  [dir]
+  `{:deps ~'{org.clojure/clojure {:mvn/version "1.10.1"}
+             pfeodrippe/tla-edn {:mvn/version "0.3.0"}}
+    :paths ~(mapv #(str dir "/" %) ["src" "classes"])})
 
 (def my-ns *ns*)
 
 (defn -main
   []
-  (let [dir (bean (fs/temp-dir "ummoi-"))
-        _ (fs/mkdirs (str (:path dir) "/src/ummoi_runner"))
-        deps-file (str (:path dir) "/deps.edn")
-        core-file (str (:path dir) "/src/ummoi_runner/core.clj")]
-    (pp-spit deps-file deps-config)
+  (let [{:keys [:path]} (bean (fs/temp-dir "ummoi-"))
+        _ (fs/mkdirs (str path "/src/ummoi_runner"))
+        deps-file (str path "/deps.edn")
+        core-file (str path "/src/ummoi_runner/core.clj")]
+    (pp-spit deps-file (deps-config path))
     (spit core-file (core-form op-forms))
     #_(deps/-main "-m" "")
-    (println :PATH (:path dir)))
+    (println :PATH path))
   #_(spec/run-spec (.getAbsolutePath (File. "resources/example.tla"))
                  "example.cfg")
   (System/exit 0))
