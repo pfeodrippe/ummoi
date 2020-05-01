@@ -28,7 +28,6 @@
 
 (defn -main
   [& [n]]
-  (println :CLASSES @spec/classes-to-be-loaded)
   (spec/run-spec (.getAbsolutePath (File. "resources/example.tla"))
                  "example.cfg"
                  ["-workers" "1"])
