@@ -104,7 +104,7 @@
         core-file (str path "/src/ummoi_runner/core.clj")]
     (pp-spit deps-file (deps-config path))
     (spit core-file (core-form op-forms))
-    #_(deps/-main "-m" "")
+    (deps/-main "-Sdeps-file" deps-file "-m" "ummoi-runner.core")
     (println :PATH path))
   #_(spec/run-spec (.getAbsolutePath (File. "resources/example.tla"))
                  "example.cfg")
