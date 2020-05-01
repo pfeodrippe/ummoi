@@ -24,9 +24,7 @@ Processes == {"t1", "t2"}
     }
     fair process (tx \in Processes)
     {
-        ADAPT:
-        skip;
-        (* ADD_NEW_AMOUNTS removido *)
+        ADAPT: skip;
         TRANSFER_MONEY: account := TransferMoney(self, account, vars);
     }
 }*)

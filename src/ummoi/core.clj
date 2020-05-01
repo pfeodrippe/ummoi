@@ -23,12 +23,11 @@
    :receiver :money :pc])
 
 (spec/defop TransferMoney {:module "example"}
-  [a b c]
+  [self account vars]
   10)
 
 (defn -main
   []
   (spec/run-spec (.getAbsolutePath (File. "resources/example.tla"))
-                 "example.cfg"
-                 ["-workers" "1"])
+                 "example.cfg")
   (System/exit 0))
