@@ -161,10 +161,12 @@
     (println :PATH path)
     (pp-spit deps-file (deps-config path))
     (spit core-file (core-form op-forms))
-    (binding [*cwd* path]
-      (with-redefs [deps/shell-command shell-command]
-        (fs/with-cwd (fs/file path)
-          (deps/-main "-Sdeps-file" deps-file "-m" "ummoi-runner.core")))))
+    (println :ENVVVV>>> (System/getenv "CLJ_CACHE"))
+    #_(binding [*cwd* path]
+        (with-redefs [deps/shell-command shell-command]
+          (fs/with-cwd (fs/file path)
+            (deps/-main "-Sdeps-file" deps-file "-m" "ummoi-runner.core"))))
+    (deps/-main "-Sverbose" "-Sdescribe" "-Sdeps-file" deps-file "-m" "ummoi-runner.core"))
   #_(spec/run-spec (.getAbsolutePath (File. "resources/example.tla"))
                    "example.cfg")
   (System/exit 0))
