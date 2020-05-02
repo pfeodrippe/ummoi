@@ -1,4 +1,4 @@
-clj_cmd = env clj -O:default-options
+clj_cmd = env clj
 
 .PHONY: build
 build:

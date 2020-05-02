@@ -1,5 +1,5 @@
 (ns ummoi.core
-  #_(:gen-class)
+  (:gen-class)
   (:require
    [borkdude.deps :as deps]
    [clojure.java.io :as io]
@@ -104,7 +104,7 @@
         core-file (str path "/src/ummoi_runner/core.clj")]
     (pp-spit deps-file (deps-config path))
     (spit core-file (core-form op-forms))
-    (deps/-main "-Sdeps-file" deps-file "-m" "ummoi-runner.core")
+    (deps/-main "-Sdeps-file" deps-file "-Sverbose" "-Sdescribe" "-m" "ummoi-runner.core")
     (println :PATH path))
   #_(spec/run-spec (.getAbsolutePath (File. "resources/example.tla"))
                  "example.cfg")
