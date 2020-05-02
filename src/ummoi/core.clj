@@ -7,10 +7,11 @@
    [clojure.pprint :as pp]
    [clojure.string :as str]
    [me.raynes.fs :as fs]
-   [tla-edn.core :as tla-edn]
-   [tla-edn.spec :as spec])
+   #_[tla-edn.core :as tla-edn]
+   #_[tla-edn.spec :as spec])
   (:import
-   (java.io File)))
+   (java.io File)
+   (java.lang ProcessBuilder$Redirect)))
 
 #_(sh/sh)
 
@@ -90,8 +91,63 @@
 (defn deps-config
   [dir]
   `{:deps ~'{org.clojure/clojure {:mvn/version "1.10.1"}
-             pfeodrippe/tla-edn {:mvn/version "0.3.0"}}
+             pfeodrippe/tla-edn {:mvn/version "0.4.0-SNAPSHOT"}}
     :paths ~(mapv #(str dir "/" %) ["src" "classes"])})
+
+(def ^:dynamic *cwd* ".")
+
+(defn shell-command
+  "Executes shell command.
+
+  Accepts the following options:
+
+  `:input`: instead of reading from stdin, read from this string.
+
+  `:to-string?`: instead of writing to stdoud, write to a string and
+  return it.
+
+  `:throw?`: Unless `false`, exits script when the shell-command has a
+  non-zero exit code, unless `throw?` is set to false."
+  ([args] (shell-command args nil))
+  ([args {:keys [:input :to-string? :throw? :show-errors?]
+          :or {throw? true
+               show-errors? true}
+          :as opts}]
+   (clojure.pprint/pprint
+    {:args args
+     :opts opts})
+   (let [args (->> (mapv str args)
+                   (str/join " ")
+                   (apply str "cd " *cwd* " && ")
+                   (conj ["bash" "-c"]))
+         pb (cond-> (ProcessBuilder. ^java.util.List args)
+              show-errors? (.redirectError ProcessBuilder$Redirect/INHERIT)
+              (not to-string?) (.redirectOutput ProcessBuilder$Redirect/INHERIT)
+              (not input) (.redirectInput ProcessBuilder$Redirect/INHERIT))
+         proc (.start pb)]
+     (when input
+       (with-open [w (io/writer (.getOutputStream proc))]
+         (binding [*out* w]
+           (print input)
+           (flush))))
+     (let [string-out
+           (when to-string?
+             (let [sw (java.io.StringWriter.)]
+               (with-open [w (io/reader (.getInputStream proc))]
+                 (io/copy w sw))
+               (str sw)))
+           exit-code (.waitFor proc)]
+       (when (and throw? (not (zero? exit-code)))
+         (System/exit exit-code))
+       string-out))))
+
+(comment
+
+  (shell-command ["bash" "-c" "cd ../ && ls"]
+                 {:to-string? true, :throw? false, :show-errors? false})
+
+  ())
+
 
 (def my-ns *ns*)
 
@@ -102,10 +158,13 @@
         _ (fs/mkdirs (str path "/classes/tlc2/overrides"))
         deps-file (str path "/deps.edn")
         core-file (str path "/src/ummoi_runner/core.clj")]
+    (println :PATH path)
     (pp-spit deps-file (deps-config path))
     (spit core-file (core-form op-forms))
-    (deps/-main "-Sdeps-file" deps-file "-Sverbose" "-Sdescribe" "-m" "ummoi-runner.core")
-    (println :PATH path))
+    (binding [*cwd* path]
+      (with-redefs [deps/shell-command shell-command]
+        (fs/with-cwd (fs/file path)
+          (deps/-main "-Sdeps-file" deps-file "-m" "ummoi-runner.core")))))
   #_(spec/run-spec (.getAbsolutePath (File. "resources/example.tla"))
-                 "example.cfg")
+                   "example.cfg")
   (System/exit 0))
