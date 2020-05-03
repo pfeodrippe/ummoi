@@ -8,6 +8,5 @@
 
  :deps {org.clojure/clojure {:mvn/version "1.10.2-alpha1"}
         borkdude/deps.clj {:mvn/version "0.0.8"}
-        me.raynes/fs {:mvn/version "1.4.6"}
-        borkdude/clj-reflector-graal-java11-fix {:mvn/version "0.0.1-graalvm-20.0.0-alpha.2"}}
+        me.raynes/fs {:mvn/version "1.4.6"}}
  :paths ["src" "resources"]}
