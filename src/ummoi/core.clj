@@ -103,15 +103,18 @@
           _ (fs/mkdirs (str path "/src/ummoi_runner"))
           _ (fs/mkdirs (str path "/classes/tlc2/overrides"))
           deps-file (str path "/deps.edn")
-          core-file (str path "/src/ummoi_runner/core.clj")]
+          core-file (str path "/src/ummoi_runner/core.clj")
+          java-cmd (System/getProperty "sun.java.command")
+          command-dir (:path (bean fs/*cwd*))]
       (pp-spit deps-file (deps-config))
       (spit core-file (core-form op-forms))
       (io/copy (io/input-stream (io/resource "ummoi-runner/classes/tlc2/overrides/TLCOverrides.class"))
                (io/file tlc-overrides-path))
       (fs/copy tlc-overrides-path (str path "/classes/tlc2/overrides/TLCOverrides.class"))
       (println "Project created at" path)
-      (println :CCWWW fs/*cwd*)
-      #_(deps/-main "-Sdeps-file" deps-file "-m" "ummoi-runner.core")
-      (println :COMMAND (System/getProperty "sun.java.command"))
-      #_(println (:out (fs/exec "-Sdeps-file" deps-file "-m" "ummoi-runner.core" )))))
+      (fs/with-cwd path
+        (println (fs/exec "java" "-jar"
+                          (str command-dir "/" (first (str/split java-cmd #" ")))
+                          "deps.exe"
+                          "-m" "ummoi-runner.core")))))
   (System/exit 0))
