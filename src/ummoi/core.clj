@@ -102,14 +102,15 @@
           core-file (str path "/src/ummoi_runner/core.clj")
           java-cmd (System/getProperty "sun.java.command")
           command-dir (.getPath ^java.io.File fs/*cwd*)]
-      (println (System/getProperties))
+      (println (into {} (System/getProperties)))
+      (println (into {} (System/getenv)))
       #_(println path)
       (do (println "Project created at" path)
           (spit deps-file (deps-config))
           (spit core-file (core-form op-forms))
-          #_(io/copy (io/input-stream (io/resource "ummoi-runner/classes/tlc2/overrides/TLCOverrides.class"))
-                     (io/file tlc-overrides-path))
-          #_(fs/copy tlc-overrides-path (str path "/classes/tlc2/overrides/TLCOverrides.class"))
+          (io/copy (io/input-stream (io/resource "ummoi-runner/classes/tlc2/overrides/TLCOverrides.class"))
+                   (io/file tlc-overrides-path))
+          (fs/copy tlc-overrides-path (str path "/classes/tlc2/overrides/TLCOverrides.class"))
           (deps/shell-command
            (->> ["cd" path "&&"
                  "java" "-jar"
