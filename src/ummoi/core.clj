@@ -1,6 +1,7 @@
 (ns ummoi.core
   (:gen-class)
   (:require
+   [borkdude.deps :as deps]
    [clojure.java.io :as io]
    [clojure.java.shell :as sh]
    [clojure.pprint :as pp]
@@ -67,7 +68,6 @@
   (->>
    `[(~'ns ummoi-runner.core
       ~'(:require
-         [borkdude.deps :as deps]
          [clojure.java.shell :as sh]
          [tla-edn.core :as tla-edn]
          [tla-edn.spec :as spec]))
@@ -91,18 +91,22 @@
 (defn deps-config
   []
   `{:deps {org.clojure/clojure {:mvn/version "1.10.1"}
-           pfeodrippe/tla-edn {:mvn/version "0.3.0"}}
+           pfeodrippe/tla-edn {:mvn/version "0.4.0"}}
     :paths ["src" "classes"]})
 
 (defn -main
-  []
-  (let [{:keys [:path]} (bean (fs/temp-dir "ummoi-"))
-        _ (fs/mkdirs (str path "/src/ummoi_runner"))
-        _ (fs/mkdirs (str path "/classes/tlc2/overrides"))
-        deps-file (str path "/deps.edn")
-        core-file (str path "/src/ummoi_runner/core.clj")]
-    (println :PATH path)
-    (pp-spit deps-file (deps-config))
-    (spit core-file (core-form op-forms))
-    #_(deps/-main "-Sdeps-file" deps-file "-m" "ummoi-runner.core"))
+  [& [which :as command-line-args]]
+  (if (= which "deps.exe")
+    (apply deps/-main (rest command-line-args))
+    (let [{:keys [:path]} (bean (fs/temp-dir "ummoi-"))
+          _ (fs/mkdirs (str path "/src/ummoi_runner"))
+          _ (fs/mkdirs (str path "/classes/tlc2/overrides"))
+          deps-file (str path "/deps.edn")
+          core-file (str path "/src/ummoi_runner/core.clj")]
+      (pp-spit deps-file (deps-config))
+      (spit core-file (core-form op-forms))
+      (fs/copy (io/resource "ummoi-runner/classes/tlc2/overrides/TLCOverrides.class")
+               (str path "/classes/tlc2/overrides/TLCOverrides.class"))
+      (println "Project created at:" path)
+      #_(deps/-main "-Sdeps-file" deps-file "-m" "ummoi-runner.core")))
   (System/exit 0))
