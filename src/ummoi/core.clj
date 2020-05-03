@@ -3,7 +3,6 @@
   (:require
    [borkdude.deps :as deps]
    [clojure.java.io :as io]
-   [clojure.java.shell :as sh]
    [clojure.string :as str]
    [me.raynes.fs :as fs]
    #_[tla-edn.core :as tla-edn]
@@ -102,22 +101,23 @@
           core-file (str path "/src/ummoi_runner/core.clj")
           java-cmd (System/getProperty "sun.java.command")
           command-dir (.getPath ^java.io.File fs/*cwd*)]
-      (println (into {} (System/getProperties)))
-      (println (into {} (System/getenv)))
-      #_(println path)
-      (do (println "Project created at" path)
-          (spit deps-file (deps-config))
-          (spit core-file (core-form op-forms))
-          (io/copy (io/input-stream (io/resource "ummoi-runner/classes/tlc2/overrides/TLCOverrides.class"))
-                   (io/file tlc-overrides-path))
-          (fs/copy tlc-overrides-path (str path "/classes/tlc2/overrides/TLCOverrides.class"))
-          (deps/shell-command
-           (->> ["cd" path "&&"
-                 "~/dev/ummoi/ummoi" "deps.exe"
-                 "-m" "ummoi-runner.core"]
-                (str/join " ")
-                (conj ["bash" "-c"]))
-           {:to-string? false
-            :throw? true
-            :show-errors? true}))))
+      (println "Project created at" path)
+      ;; create deps.edn and core.clj
+      (spit deps-file (deps-config))
+      (spit core-file (core-form op-forms))
+      ;; copy TLCOverrides.class so you don't need to call ummoi-runner twice (the first
+      ;; one would be for operators compilation)
+      (io/copy (io/input-stream (io/resource "ummoi-runner/classes/tlc2/overrides/TLCOverrides.class"))
+               (io/file tlc-overrides-path))
+      (fs/copy tlc-overrides-path (str path "/classes/tlc2/overrides/TLCOverrides.class"))
+      ;; call the generated project using ummoi itself
+      (deps/shell-command
+       (->> ["cd" path "&&"
+             "~/dev/ummoi/ummoi" "deps.exe"
+             "-m" "ummoi-runner.core"]
+            (str/join " ")
+            (conj ["bash" "-c"]))
+       {:to-string? false
+        :throw? true
+        :show-errors? true})))
   (System/exit 0))
