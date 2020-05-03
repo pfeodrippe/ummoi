@@ -113,7 +113,6 @@
 
 (defn -main
   [& [which :as command-line-args]]
-  (println :STA)
   (if (= which "deps.exe")
     (apply deps/-main (rest command-line-args))
     (let [path (.getPath ^java.io.File (fs/temp-dir "ummoi-"))
