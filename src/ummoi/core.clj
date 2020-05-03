@@ -49,19 +49,21 @@
      {:module "example"
       :args [self account vars]
       :run {:type :shell
-            :command ["bb" "a.clj" x y z]}}}})
+            :command ["/home/rafael/dev/ummoi/a.sh"]}}}})
 
 (defn op-form
-  [name {:keys [:module :args]}]
+  [name {:keys [:module :args :run]}]
   `(spec/defop ~(symbol name) {:module ~module}
      ~args
-     (let [env-vars# (->> (mapv (comp json/generate-string tla-edn/to-edn) ~args)
-                          (mapv (fn [arg-name# arg-value#]
-                                  [arg-name# arg-value#])
-                                ~(mapv str args))
-                          (into {}))]
-       (sh/with-sh-env env-vars#
-         (println :CMD (sh/sh "/home/rafael/dev/ummoi/a.sh"))))
+     ~(case (:type run)
+        :shell
+        `(let [env-vars# (->> (mapv (comp json/generate-string tla-edn/to-edn) ~args)
+                             (mapv (fn [arg-name# arg-value#]
+                                     [arg-name# arg-value#])
+                                   ~(mapv str args))
+                             (into {}))]
+          (sh/with-sh-env env-vars#
+            (println :CMD (apply sh/sh ~(:command run))))))
      10))
 
 (def op-forms
