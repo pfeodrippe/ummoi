@@ -43,6 +43,36 @@
         (update receiver + money)
         tla-edn/to-tla-value)))
 
+
+(defn deps-config
+  []
+  `{:deps ~'{org.clojure/clojure {:mvn/version "1.10.1"}
+             pfeodrippe/tla-edn {:mvn/version "0.4.0"}
+             cheshire {:mvn/version "5.10.0"}}
+    :paths ["src" "classes"]})
+
+(defn core-form
+  [op-forms]
+  (->>
+   `[(~'ns ummoi-runner.core
+      ~'(:require
+         [cheshire.core :as json]
+         [clojure.java.shell :as sh]
+         [clojure.pprint :as pp]
+         [tla-edn.core :as tla-edn]
+         [tla-edn.spec :as spec]))
+
+     ~@op-forms
+
+     (defn ~'-main
+       []
+       (spec/run-spec "/home/rafael/dev/ummoi/resources/example.tla"
+                      #_(.getAbsolutePath (File. "resources/example.tla"))
+                      "example.cfg")
+       (System/exit 0))]
+   (map str)
+   (str/join "\n")))
+
 (def ummoi-config
   '{:operators
     {"TransferMoney"
@@ -82,37 +112,9 @@
           (op-form name op-args))
         (:operators ummoi-config)))
 
-(defn deps-config
-  []
-  `{:deps ~'{org.clojure/clojure {:mvn/version "1.10.1"}
-             pfeodrippe/tla-edn {:mvn/version "0.4.0"}
-             cheshire {:mvn/version "5.10.0"}}
-    :paths ["src" "classes"]})
-
-(defn core-form
-  [op-forms]
-  (->>
-   `[(~'ns ummoi-runner.core
-      ~'(:require
-         [cheshire.core :as json]
-         [clojure.java.shell :as sh]
-         [clojure.pprint :as pp]
-         [tla-edn.core :as tla-edn]
-         [tla-edn.spec :as spec]))
-
-     ~@op-forms
-
-     (defn ~'-main
-       []
-       (spec/run-spec "/home/rafael/dev/ummoi/resources/example.tla"
-                      #_(.getAbsolutePath (File. "resources/example.tla"))
-                      "example.cfg")
-       (System/exit 0))]
-   (map str)
-   (str/join "\n")))
-
 (defn -main
   [& [which :as command-line-args]]
+  (println (System/getProperty "user.dir"))
   (if (= which "deps.exe")
     (apply deps/-main (rest command-line-args))
     (let [path (.getPath ^java.io.File (fs/temp-dir "ummoi-"))
