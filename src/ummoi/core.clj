@@ -113,9 +113,7 @@
           (fs/copy tlc-overrides-path (str path "/classes/tlc2/overrides/TLCOverrides.class"))
           (deps/shell-command
            (->> ["cd" path "&&"
-                 "java" "-jar"
-                 (str command-dir "/" (first (str/split java-cmd #" ")))
-                 "deps.exe"
+                 "~/dev/ummoi/ummoi" "deps.exe"
                  "-m" "ummoi-runner.core"]
                 (str/join " ")
                 (conj ["bash" "-c"]))
