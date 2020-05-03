@@ -111,5 +111,7 @@
       (fs/copy tlc-overrides-path (str path "/classes/tlc2/overrides/TLCOverrides.class"))
       (println "Project created at" path)
       (println :CCWWW fs/*cwd*)
-      #_(deps/-main "-Sdeps-file" deps-file "-m" "ummoi-runner.core")))
+      #_(deps/-main "-Sdeps-file" deps-file "-m" "ummoi-runner.core")
+      (println :COMMAND (System/getProperty "sun.java.command"))
+      #_(println (:out (fs/exec "-Sdeps-file" deps-file "-m" "ummoi-runner.core" )))))
   (System/exit 0))
