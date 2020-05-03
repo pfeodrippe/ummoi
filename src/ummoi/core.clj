@@ -49,7 +49,7 @@
      {:module "example"
       :args [self account vars]
       :run {:type :shell
-            :command ["/home/rafael/dev/ummoi/a.sh"]}}}})
+            :command ["/home/rafael/dev/ummoi/a.py"]}}}})
 
 (defn op-form
   [name {:keys [:module :args :run]}]
@@ -58,13 +58,24 @@
      ~(case (:type run)
         :shell
         `(let [env-vars# (->> (mapv (comp json/generate-string tla-edn/to-edn) ~args)
-                             (mapv (fn [arg-name# arg-value#]
-                                     [arg-name# arg-value#])
-                                   ~(mapv str args))
-                             (into {}))]
-          (sh/with-sh-env env-vars#
-            (println :CMD (apply sh/sh ~(:command run))))))
-     10))
+                              (mapv (fn [arg-name# arg-value#]
+                                      [arg-name# arg-value#])
+                                    ~(mapv str args))
+                              (into {}))
+               response# (sh/with-sh-env env-vars# (apply sh/sh ~(:command run)))]
+           (if (empty? (:err response#))
+             (-> (:out response#)
+                 json/parse-string
+                 tla-edn/to-tla-value)
+             (do (println :OUT (:out response#))
+                 (println :ERR (:err response#))
+                 (pp/pprint
+                  {:message (str "Error running operator " ~name)
+                   :operator ~name
+                   :env-vars env-vars#})
+                 (throw (ex-info (str "Error running operator " ~name)
+                                 {:operator ~name
+                                  :env-vars env-vars#}))))))))
 
 (def op-forms
   (mapv (fn [[name op-args]]
