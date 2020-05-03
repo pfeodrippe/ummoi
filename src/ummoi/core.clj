@@ -15,14 +15,6 @@
 #_"um -c ummoi.edn example.tla"
 #_"um example.tla"                      ; same folder as configuration
 
-(def ummoi-config
-  '{:operators
-    {"TransferMoney"
-     {:module "example"
-      :args [a b c]
-      :run {:type :shell
-            :command ["bb" "a.clj" x y z]}}}})
-
 #_(def vars-keys
   [:c1 :c2 :account :receiver-new-amount :sender-new-amount :sender
    :receiver :money :pc])
@@ -51,18 +43,47 @@
         (update receiver + money)
         tla-edn/to-tla-value)))
 
+(def ummoi-config
+  '{:operators
+    {"TransferMoney"
+     {:module "example"
+      :args [self account vars]
+      :run {:type :shell
+            :command ["bb" "a.clj" x y z]}}}})
+
 (defn op-form
-  [{:keys [:name :module :args]}]
+  [name {:keys [:module :args]}]
   `(spec/defop ~(symbol name) {:module ~module}
      ~args
+     (->> (mapv (comp json/generate-string tla-edn/to-edn) ~args)
+          (map (fn [arg-name# arg-value#]
+                 (str arg-name# "='" arg-value# "'"))
+               ~(mapv str args))
+          (str/join " ")
+          pp/pprint)
+     (println :PWD (sh/sh "echo" ))
      10))
+
+(def op-forms
+  (mapv (fn [[name op-args]]
+          (op-form name op-args))
+        (:operators ummoi-config)))
+
+(defn deps-config
+  []
+  `{:deps ~'{org.clojure/clojure {:mvn/version "1.10.1"}
+             pfeodrippe/tla-edn {:mvn/version "0.4.0"}
+             cheshire {:mvn/version "5.10.0"}}
+    :paths ["src" "classes"]})
 
 (defn core-form
   [op-forms]
   (->>
    `[(~'ns ummoi-runner.core
       ~'(:require
+         [cheshire.core :as json]
          [clojure.java.shell :as sh]
+         [clojure.pprint :as pp]
          [tla-edn.core :as tla-edn]
          [tla-edn.spec :as spec]))
 
@@ -76,17 +97,6 @@
        (System/exit 0))]
    (map str)
    (str/join "\n")))
-
-(def op-forms
-  (mapv (fn [[name {:keys [:args :module :run]}]]
-          (op-form {:name name :args args :module module}))
-        (:operators ummoi-config)))
-
-(defn deps-config
-  []
-  `{:deps {org.clojure/clojure {:mvn/version "1.10.1"}
-           pfeodrippe/tla-edn {:mvn/version "0.4.0"}}
-    :paths ["src" "classes"]})
 
 (defn -main
   [& [which :as command-line-args]]
@@ -111,13 +121,23 @@
                (io/file tlc-overrides-path))
       (fs/copy tlc-overrides-path (str path "/classes/tlc2/overrides/TLCOverrides.class"))
       ;; call the generated project using ummoi itself
-      (deps/shell-command
-       (->> ["cd" path "&&"
-             "~/dev/ummoi/ummoi" "deps.exe"
-             "-m" "ummoi-runner.core"]
-            (str/join " ")
-            (conj ["bash" "-c"]))
-       {:to-string? false
-        :throw? true
-        :show-errors? true})))
+      (if java-cmd
+        (deps/shell-command
+         (->> ["cd" path "&&"
+               "deps.exe"
+               "-m" "ummoi-runner.core"]
+              (str/join " ")
+              (conj ["bash" "-c"]))
+         {:to-string? false
+          :throw? true
+          :show-errors? true})
+        (deps/shell-command
+         (->> ["cd" path "&&"
+               "~/dev/ummoi/ummoi" "deps.exe"
+               "-m" "ummoi-runner.core"]
+              (str/join " ")
+              (conj ["bash" "-c"]))
+         {:to-string? false
+          :throw? true
+          :show-errors? true}))))
   (System/exit 0))
