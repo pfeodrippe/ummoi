@@ -55,13 +55,13 @@
   [name {:keys [:module :args]}]
   `(spec/defop ~(symbol name) {:module ~module}
      ~args
-     (->> (mapv (comp json/generate-string tla-edn/to-edn) ~args)
-          (map (fn [arg-name# arg-value#]
-                 (str arg-name# "='" arg-value# "'"))
-               ~(mapv str args))
-          (str/join " ")
-          pp/pprint)
-     (println :PWD (sh/sh "echo" ))
+     (let [env-vars# (->> (mapv (comp json/generate-string tla-edn/to-edn) ~args)
+                          (mapv (fn [arg-name# arg-value#]
+                                  [arg-name# arg-value#])
+                                ~(mapv str args))
+                          (into {}))]
+       (sh/with-sh-env env-vars#
+         (println :CMD (sh/sh "/home/rafael/dev/ummoi/a.sh"))))
      10))
 
 (def op-forms
