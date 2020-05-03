@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-# based at https://github.com/borkdude/deps.clj/blob/master/script/compile
+# based on https://github.com/borkdude/deps.clj/blob/master/script/compile
 
 set -eo pipefail
 

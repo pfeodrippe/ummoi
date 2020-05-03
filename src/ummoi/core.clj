@@ -4,12 +4,11 @@
    [borkdude.deps :as deps]
    [clojure.java.io :as io]
    [clojure.java.shell :as sh]
-   [clojure.pprint :as pp]
    [clojure.string :as str]
    [me.raynes.fs :as fs]
    #_[tla-edn.core :as tla-edn]
    #_[tla-edn.spec :as spec])
-  (:import
+  #_(:import
    (java.io File)))
 
 #_(sh/sh)
@@ -25,7 +24,7 @@
       :run {:type :shell
             :command ["bb" "a.clj" x y z]}}}})
 
-(def vars-keys
+#_(def vars-keys
   [:c1 :c2 :account :receiver-new-amount :sender-new-amount :sender
    :receiver :money :pc])
 
@@ -53,10 +52,6 @@
         (update receiver + money)
         tla-edn/to-tla-value)))
 
-(defn pp-spit
-  [file data]
-  (spit file (with-out-str (pp/pprint data))))
-
 (defn op-form
   [{:keys [:name :module :args]}]
   `(spec/defop ~(symbol name) {:module ~module}
@@ -80,7 +75,7 @@
                       #_(.getAbsolutePath (File. "resources/example.tla"))
                       "example.cfg")
        (System/exit 0))]
-   (map #(with-out-str (pp/pprint %)))
+   (map str)
    (str/join "\n")))
 
 (def op-forms
@@ -96,31 +91,33 @@
 
 (defn -main
   [& [which :as command-line-args]]
+  (println :STA)
   (if (= which "deps.exe")
     (apply deps/-main (rest command-line-args))
-    (let [{:keys [:path]} (bean (fs/temp-dir "ummoi-"))
-          {tlc-overrides-path :path} (bean (fs/temp-file ""))
+    (let [path (.getPath ^java.io.File (fs/temp-dir "ummoi-"))
+          tlc-overrides-path (.getPath ^java.io.File (fs/temp-file ""))
           _ (fs/mkdirs (str path "/src/ummoi_runner"))
           _ (fs/mkdirs (str path "/classes/tlc2/overrides"))
           deps-file (str path "/deps.edn")
           core-file (str path "/src/ummoi_runner/core.clj")
           java-cmd (System/getProperty "sun.java.command")
-          command-dir (:path (bean fs/*cwd*))]
-      (pp-spit deps-file (deps-config))
-      (spit core-file (core-form op-forms))
-      (io/copy (io/input-stream (io/resource "ummoi-runner/classes/tlc2/overrides/TLCOverrides.class"))
-               (io/file tlc-overrides-path))
-      (fs/copy tlc-overrides-path (str path "/classes/tlc2/overrides/TLCOverrides.class"))
-      (println "Project created at" path)
-      (deps/shell-command
-       (->> ["cd" path "&&"
-             "java" "-jar"
-             (str command-dir "/" (first (str/split java-cmd #" ")))
-             "deps.exe"
-             "-m" "ummoi-runner.core"]
-            (str/join " ")
-            (conj ["bash" "-c"]))
-       {:to-string? false
-        :throw? true
-        :show-errors? true})))
+          command-dir (.getPath ^java.io.File fs/*cwd*)]
+      #_(println path)
+      (do (println "Project created at" path)
+          (spit deps-file (deps-config))
+          (spit core-file (core-form op-forms))
+          #_(io/copy (io/input-stream (io/resource "ummoi-runner/classes/tlc2/overrides/TLCOverrides.class"))
+                   (io/file tlc-overrides-path))
+          #_(fs/copy tlc-overrides-path (str path "/classes/tlc2/overrides/TLCOverrides.class"))
+          (deps/shell-command
+           (->> ["cd" path "&&"
+                 "java" "-jar"
+                 (str command-dir "/" (first (str/split java-cmd #" ")))
+                 "deps.exe"
+                 "-m" "ummoi-runner.core"]
+                (str/join " ")
+                (conj ["bash" "-c"]))
+           {:to-string? false
+            :throw? true
+            :show-errors? true}))))
   (System/exit 0))
