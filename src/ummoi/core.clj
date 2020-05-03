@@ -112,9 +112,15 @@
                (io/file tlc-overrides-path))
       (fs/copy tlc-overrides-path (str path "/classes/tlc2/overrides/TLCOverrides.class"))
       (println "Project created at" path)
-      (fs/with-cwd path
-        (println (fs/exec "java" "-jar"
-                          (str command-dir "/" (first (str/split java-cmd #" ")))
-                          "deps.exe"
-                          "-m" "ummoi-runner.core")))))
+      (deps/shell-command
+       (->> ["cd" path "&&"
+             "java" "-jar"
+             (str command-dir "/" (first (str/split java-cmd #" ")))
+             "deps.exe"
+             "-m" "ummoi-runner.core"]
+            (str/join " ")
+            (conj ["bash" "-c"]))
+       {:to-string? false
+        :throw? true
+        :show-errors? true})))
   (System/exit 0))
