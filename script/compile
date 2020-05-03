@@ -1,0 +1,30 @@
+#!/usr/bin/env bash
+
+# based at https://github.com/borkdude/deps.clj/blob/master/script/compile
+
+set -eo pipefail
+
+if [ -z "$GRAALVM_HOME" ]; then
+    echo "Please set GRAALVM_HOME"
+    exit 1
+fi
+
+"$GRAALVM_HOME/bin/gu" install native-image || true
+
+UMMOI_VERSION=$(cat resources/UMMOI_VERSION)
+
+make build
+
+"$GRAALVM_HOME/bin/native-image" \
+  -jar target/ummoi.jar \
+  -H:Name=ummoi \
+  -H:+ReportExceptionStackTraces \
+  -J-Dclojure.spec.skip-macros=true \
+  -J-Dclojure.compiler.direct-linking=true \
+  "-H:IncludeResources=UMMOI_VERSION" \
+  --initialize-at-build-time \
+  -H:Log=registerResource: \
+  --verbose \
+  --no-fallback \
+  --no-server \
+  "-J-Xmx3g"
