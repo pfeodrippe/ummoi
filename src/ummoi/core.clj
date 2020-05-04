@@ -51,14 +51,17 @@
         arg->value# (gensym)]
     `(spec/defop ~(symbol name) {:module ~module}
        ~args
-       (let [~arg->value# (->> (mapv (comp json/generate-string tla-edn/to-edn) ~args)
-                            (mapv (fn [arg-name# arg-value#]
-                                    [arg-name# arg-value#])
-                                  ~(mapv str args))
-                            (into {}))]
+       (let [~arg->value# (->> (mapv tla-edn/to-edn ~args)
+                               (mapv (fn [arg-name# arg-value#]
+                                       [arg-name# arg-value#])
+                                     ~(mapv str args))
+                               (into {}))]
          ~(case (keyword (:type run))
             :shell
-            `(let [env-vars# ~arg->value#
+            `(let [env-vars# (->> ~arg->value#
+                                  (mapv (fn [[arg-name# arg-value#]]
+                                          [arg-name# (json/generate-string arg-value#)]))
+                                  (into {}))
                    response# (sh/with-sh-dir ~user-dir
                                (sh/with-sh-env env-vars# (apply sh/sh ~(:command run))))]
                (if (empty? (:err response#))
@@ -73,7 +76,30 @@
                        :env-vars env-vars#})
                      (throw (ex-info (str "Error running operator " ~name)
                                      {:operator ~name
-                                      :env-vars env-vars#}))))))))))
+                                      :env-vars env-vars#})))))
+
+            :http-post
+            `(let [form-params# ~arg->value#
+                   _# (pp/pprint {:form form-params#})
+                   response# (http/post ~(:endpoint run)
+                                        (merge
+                                         {:form-params form-params#
+                                          :throw-exceptions false}
+                                         ~(:headers run)))]
+               (when (>= 299 (:status response#) 200)
+                 (pp/pprint {:response response#})
+                 (-> (:body response#)
+                     json/parse-string
+                     tla-edn/to-tla-value)
+                 #_(do (println :OUT (:out response#))
+                       (println :ERR (:err response#))
+                       (pp/pprint
+                        {:message (str "Error running operator " ~name)
+                         :operator ~name
+                         :env-vars env-vars#})
+                       (throw (ex-info (str "Error running operator " ~name)
+                                       {:operator ~name
+                                        :env-vars env-vars#}))))) )))))
 
 (defn error
   [msg]
@@ -139,22 +165,32 @@
                        (if-not (empty? p)
                          p
                          (deps/where "um")))
-          user-dir (System/getProperty "user.dir")]
+          user-dir (System/getProperty "user.dir")
+          verbose? (some #(contains? #{"-v" "--verbose"} %) command-line-args)
+          opts-map {:user-dir user-dir
+                    :verbose? verbose?}
+          ummoi-config (or (->> (partition 2 1 command-line-args)
+                                (some (fn [[opt path]]
+                                        (when (contains? #{"-c" "--config"} opt)
+                                          (let [file (io/as-file path)
+                                                extension (fs/extension file)]
+                                            (if (and (.exists file) (contains? #{".edn" ".json"} extension))
+                                              (if (= extension ".edn")
+                                                (clojure.edn/read-string (slurp file))
+                                                (json/parse-string (slurp file) keyword))
+                                              (error (str "configuration file does not exist "
+                                                          "or it's invalid (only .json or .edn files are accepted): "
+                                                          [opt path]))))))))
+                           (cond
+                             (.exists (io/as-file "ummoi.edn")) (clojure.edn/read-string (slurp "ummoi.edn"))
+                             (.exists (io/as-file "ummoi.json")) (json/parse-string (slurp "ummoi.json") keyword)
+                             :else (error "must exist a `ummoi.edn` or `ummoi.json` file")))]
+      (when verbose?
+        (deps/describe [[:ummoi-config ummoi-config]]))
       (println "Project created at" path)
       ;; create deps.edn and core.clj
       (spit deps-file (deps-config))
-      (cond
-        (.exists (io/as-file "ummoi.edn"))
-        (spit core-file (core-form (clojure.edn/read-string (slurp "ummoi.edn"))
-                                   {:user-dir user-dir
-                                    :verbose? (= (first command-line-args) "-v")}))
-
-        (.exists (io/as-file "ummoi.json"))
-        (spit core-file (core-form (json/parse-string (slurp "ummoi.json") keyword)
-                                   {:user-dir user-dir
-                                    :verbose? (= (first command-line-args) "-v")}))
-
-        :else (error "must exist a `ummoi.edn` or `ummoi.json` file"))
+      (spit core-file (core-form ummoi-config opts-map))
       ;; copy TLCOverrides.class so you don't need to call ummoi-runner twice (the first
       ;; one would be for operators compilation)
       (io/copy (io/input-stream (io/resource "ummoi-runner/classes/tlc2/overrides/TLCOverrides.class"))
