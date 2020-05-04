@@ -78,30 +78,33 @@
 
 (defn core-form
   [{:keys [:spec-file :config-file :operators]}]
-  (->>
-   `[(~'ns ummoi-runner.core
-      ~'(:require
-         [cheshire.core :as json]
-         [clojure.java.shell :as sh]
-         [clojure.pprint :as pp]
-         [tla-edn.core :as tla-edn]
-         [tla-edn.spec :as spec]))
+  (let [spec-file (.getAbsolutePath ^java.io.File (io/file spec-file))
+        config-file (or config-file
+                        (str/replace (.getName ^java.io.File (io/file spec-file)) #"tla" "cfg"))]
+    (when true
+      (deps/describe [[:spec-file spec-file]
+                      [:config-file config-file]]))
+    (->>
+     `[(~'ns ummoi-runner.core
+        ~'(:require
+           [cheshire.core :as json]
+           [clojure.java.shell :as sh]
+           [clojure.pprint :as pp]
+           [tla-edn.core :as tla-edn]
+           [tla-edn.spec :as spec]))
 
-     ~@(mapv (fn [[name op-args]]
-               (op-form name op-args))
-             operators)
+       ~@(mapv (fn [[name op-args]]
+                 (op-form name op-args))
+               operators)
 
-     (defn ~'-main
-       []
-       ;; here we pass the tla file and tlc config file paths.
-       ;; if a tlc file is not passed, it's assumed the same filename as the tla file.
-       (spec/run-spec ~(.getAbsolutePath ^java.io.File (fs/file spec-file))
-                      ~(or config-file
-                           (str/replace (.getName ^java.io.File (fs/file spec-file))
-                                        #"tla" "cfg")))
-       (System/exit 0))]
-   (map str)
-   (str/join "\n")))
+       (defn ~'-main
+         []
+         ;; here we pass the tla file and tlc config file paths.
+         ;; if a tlc file is not passed, it's assumed the same filename as the tla file.
+         (spec/run-spec ~spec-file ~config-file)
+         (System/exit 0))]
+     (map str)
+     (str/join "\n"))))
 
 (defn -main
   [& [which :as command-line-args]]
@@ -114,7 +117,6 @@
           deps-file (str path "/deps.edn")
           core-file (str path "/src/ummoi_runner/core.clj")
           from-java? (System/getProperty "sun.java.command")
-          command-dir (.getPath ^java.io.File fs/*cwd*)
           ummoi-path (let [p (deps/where "./umm")]
                        (if-not (empty? p)
                          p
@@ -139,7 +141,7 @@
                                        {:to-string? false
                                         :throw? true
                                         :show-errors? true})
-        (empty? ummoi-path) (do (println "ummoi is not at your path, please define it")
+        (empty? ummoi-path) (do (println "ummoi is not at your path, please add it")
                                 (System/exit 1))
         :else (deps/shell-command (->> ["cd" path "&&"
                                         ummoi-path "deps.exe"
