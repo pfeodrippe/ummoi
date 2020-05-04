@@ -46,7 +46,7 @@
     :paths ["src" "classes"]})
 
 (defn op-form
-  [name {:keys [:module :args :run]} {:keys [:user-dir]}]
+  [name {:keys [:module :args :run]} {:keys [:config-dir]}]
   (let [args (mapv symbol args)
         arg->value# (gensym)]
     `(spec/defop ~(symbol name) {:module ~module}
@@ -62,7 +62,7 @@
                                   (mapv (fn [[arg-name# arg-value#]]
                                           [arg-name# (json/generate-string arg-value#)]))
                                   (into {}))
-                   response# (sh/with-sh-dir ~user-dir
+                   response# (sh/with-sh-dir ~config-dir
                                (sh/with-sh-env env-vars# (apply sh/sh ~(:command run))))]
                (if (empty? (:err response#))
                  (-> (:out response#)
@@ -110,23 +110,25 @@
   "{\n  \"spec-file\" : \"dev/ummoi/resources/example.tla\",\n  \"operators\" : {\n    \"TransferMoney\" : {\n      \"module\" : \"example\",\n      \"args\" : [ \"self\", \"account\", \"vars\" ],\n      \"run\" : {\n        \"type\" : \"shell\",\n        \"command\" : [ \"dev/ummoi/resources/example_using_env.py\" ]\n      }\n    }\n  }\n}")
 
 (def edn-example
-  "{:spec-file \"dev/ummoi/resources/example.tla\"\n :operators\n {\"TransferMoney\"\n  {:module \"example\"\n   :args [self account vars]\n   :run {:type :shell\n         :command [\"dev/ummoi/resources/example_using_env.py\"]}}}}\n\n\n")
+  "{:spec-file \"dev/ummoi/resources/example.tla\"\n :operators\n {\"TransferMoney\"\n  {:module \"example\"\n   :args [self account vars]\n   :run {:type :shell\n         :command [\"dev/ummoi/resources/example_using_env.py\"]}}}}")
 
 (defn core-form
-  [{:keys [:spec-file :config-file :operators]} {:keys [:verbose?] :as opts}]
+  [{:keys [:spec-file :config-file :operators]} {:keys [:verbose? :config-dir] :as opts}]
   (cond
-    (nil? spec-file) (error "missing `spec-file` key (\"/path/to/spec.tla\")")
+    (nil? spec-file) (error "missing `spec-file` key (\"path/to/spec.tla\")")
     (or (nil? operators)
         (some nil? (mapcat (juxt :module :args :run) (vals operators))))
-    (error (str "invalid `operators` key (\"/path/to/spec.tla\")\n"
+    (error (str "invalid `operators` key\n"
                 "see examples below: \n\nEDN\n" edn-example
-                "\n\nJSON\n" json-example)))
-  (let [spec-file (.getAbsolutePath ^java.io.File (io/file spec-file))
-        config-file (or config-file
+                "\n\nJSON\n\n" json-example)))
+  (let [spec-path (.getCanonicalPath ^java.io.File (io/file config-dir spec-file))
+        config-path (or config-file
                         (str/replace (.getName ^java.io.File (io/file spec-file)) #"tla" "cfg"))]
     (when verbose?
       (deps/describe [[:spec-file spec-file]
-                      [:config-file config-file]]))
+                      [:spec-path spec-path]
+                      [:config-file config-file]
+                      [:config-path config-path]]))
     (->>
      `[(~'ns ummoi-runner.core
         ~'(:require
@@ -145,16 +147,43 @@
          []
          ;; here we pass the tla file and tlc config file paths.
          ;; if a tlc file is not passed, it's assumed the same filename as the tla file.
-         (spec/run-spec ~spec-file ~config-file)
+         (spec/run-spec ~spec-path ~config-path)
          (System/exit 0))]
      (map str)
      (str/join "\n"))))
+
+(defn parse-command-line-args
+  [command-line-args]
+  (let [[config-file config-file-type]
+        (or (->> (partition 2 1 command-line-args)
+                 (some (fn [[opt path]]
+                         (when (contains? #{"-c" "--config"} opt)
+                           (let [file (io/as-file path)
+                                 extension (fs/extension file)]
+                             (if (and (.exists file) (contains? #{".edn" ".json"} extension))
+                               [file ({".edn" :edn ".json" :json} extension)]
+                               (error (str "configuration file does not exist "
+                                           "or it's invalid (only .json or .edn files are accepted): "
+                                           [opt path]))))))))
+            (cond
+              (.exists (io/as-file "ummoi.edn")) [(io/as-file "ummoi.edn") :edn]
+              (.exists (io/as-file "ummoi.json")) [(io/as-file "ummoi.json") :json]
+              :else (error "must exist a `ummoi.edn` or `ummoi.json` file")))]
+    {:config-file config-file
+     :config-file-type config-file-type
+     :verbose? (some #(contains? #{"-v" "--verbose"} %) command-line-args)}))
 
 (defn -main
   [& [which :as command-line-args]]
   (if (= which "deps.exe")
     (apply deps/-main (rest command-line-args))
-    (let [path (.getPath ^java.io.File (fs/temp-dir "ummoi-"))
+    (let [{:keys [:config-file :config-file-type :verbose?]} (parse-command-line-args command-line-args)
+          ummoi-config (if (= config-file-type :edn)
+                         (clojure.edn/read-string (slurp config-file))
+                         (json/parse-string (slurp config-file) keyword))
+          config-dir (.getParent ^java.io.File (.getCanonicalFile ^java.io.File config-file))
+          opts-map {:config-dir config-dir :verbose? verbose?}
+          path (.getPath ^java.io.File (fs/temp-dir "ummoi-"))
           tlc-overrides-path (.getPath ^java.io.File (fs/temp-file ""))
           _ (fs/mkdirs (str path "/src/ummoi_runner"))
           _ (fs/mkdirs (str path "/classes/tlc2/overrides"))
@@ -164,30 +193,15 @@
           ummoi-path (let [p (deps/where "./umm")]
                        (if-not (empty? p)
                          p
-                         (deps/where "um")))
-          user-dir (System/getProperty "user.dir")
-          verbose? (some #(contains? #{"-v" "--verbose"} %) command-line-args)
-          opts-map {:user-dir user-dir
-                    :verbose? verbose?}
-          ummoi-config (or (->> (partition 2 1 command-line-args)
-                                (some (fn [[opt path]]
-                                        (when (contains? #{"-c" "--config"} opt)
-                                          (let [file (io/as-file path)
-                                                extension (fs/extension file)]
-                                            (if (and (.exists file) (contains? #{".edn" ".json"} extension))
-                                              (if (= extension ".edn")
-                                                (clojure.edn/read-string (slurp file))
-                                                (json/parse-string (slurp file) keyword))
-                                              (error (str "configuration file does not exist "
-                                                          "or it's invalid (only .json or .edn files are accepted): "
-                                                          [opt path]))))))))
-                           (cond
-                             (.exists (io/as-file "ummoi.edn")) (clojure.edn/read-string (slurp "ummoi.edn"))
-                             (.exists (io/as-file "ummoi.json")) (json/parse-string (slurp "ummoi.json") keyword)
-                             :else (error "must exist a `ummoi.edn` or `ummoi.json` file")))]
+                         (deps/where "um")))]
       (when verbose?
-        (deps/describe [[:ummoi-config ummoi-config]])
-        (println "Project created at" path))
+        (println "Project created at" path)
+        (deps/describe [[:config-dir config-dir]
+                        [:config-file config-file]
+                        [:config-file-type config-file-type]
+                        [:verbose? verbose?]
+                        [:ummoi-config ummoi-config]
+                        [:command-line-args command-line-args]]))
       ;; create deps.edn and core.clj
       (spit deps-file (deps-config))
       (spit core-file (core-form ummoi-config opts-map))
