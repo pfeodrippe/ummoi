@@ -10,10 +10,6 @@
   (:import
    (java.io File)))
 
-
-"um -c ummoi.edn example.tla"
-"um example.tla"                      ; same folder as configuration
-
 #_(def vars-keys
   [:c1 :c2 :account :receiver-new-amount :sender-new-amount :sender
    :receiver :money :pc])
@@ -51,7 +47,7 @@
     :paths ["src" "classes"]})
 
 (defn op-form
-  [name {:keys [:module :args :run]}]
+  [name {:keys [:module :args :run]} {:keys [:user-dir]}]
   `(spec/defop ~(symbol name) {:module ~module}
      ~args
      ~(case (keyword (:type run))
@@ -61,7 +57,8 @@
                                       [arg-name# arg-value#])
                                     ~(mapv str args))
                               (into {}))
-               response# (sh/with-sh-env env-vars# (apply sh/sh ~(:command run)))]
+               response# (sh/with-sh-dir ~user-dir
+                           (sh/with-sh-env env-vars# (apply sh/sh ~(:command run))))]
            (if (empty? (:err response#))
              (-> (:out response#)
                  json/parse-string
@@ -77,7 +74,7 @@
                                   :env-vars env-vars#}))))))))
 
 (defn core-form
-  [{:keys [:spec-file :config-file :operators]}]
+  [{:keys [:spec-file :config-file :operators]} opts]
   (let [spec-file (.getAbsolutePath ^java.io.File (io/file spec-file))
         config-file (or config-file
                         (str/replace (.getName ^java.io.File (io/file spec-file)) #"tla" "cfg"))]
@@ -94,7 +91,7 @@
            [tla-edn.spec :as spec]))
 
        ~@(mapv (fn [[name op-args]]
-                 (op-form name op-args))
+                 (op-form name op-args opts))
                operators)
 
        (defn ~'-main
@@ -125,7 +122,8 @@
       (println "Project created at" path)
       ;; create deps.edn and core.clj
       (spit deps-file (deps-config))
-      (spit core-file (core-form (clojure.edn/read-string (slurp "ummoi.edn"))))
+      (spit core-file (core-form (clojure.edn/read-string (slurp "ummoi.edn"))
+                                 {:user-dir user-dir}))
       ;; copy TLCOverrides.class so you don't need to call ummoi-runner twice (the first
       ;; one would be for operators compilation)
       (io/copy (io/input-stream (io/resource "ummoi-runner/classes/tlc2/overrides/TLCOverrides.class"))
