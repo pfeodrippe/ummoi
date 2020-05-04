@@ -73,12 +73,24 @@
                                  {:operator ~name
                                   :env-vars env-vars#}))))))))
 
+(defn error
+  [msg]
+  (println "ERROR: " msg)
+  (System/exit 1))
+
 (defn core-form
-  [{:keys [:spec-file :config-file :operators]} opts]
+  [{:keys [:spec-file :config-file :operators]} {:keys [:verbose?] :as opts}]
+  (cond
+    (nil? spec-file) (error "missing `spec-file` key (\"/path/to/spec.tla\")")
+    (or (nil? operators)
+        (some nil? (mapcat (juxt :module :args :run) (vals operators))))
+    (error (str "invalid `operators` key (\"/path/to/spec.tla\")\n"
+                "see example below: \n\n"
+                "{:spec-file \"dev/ummoi/resources/example.tla\"\n :operators\n {\"TransferMoney\"\n  {:module \"example\"\n   :args [self account vars]\n   :run {:type :shell\n         :command [\"dev/ummoi/resources/ex.py\"]}}}}\n\n\n")))
   (let [spec-file (.getAbsolutePath ^java.io.File (io/file spec-file))
         config-file (or config-file
                         (str/replace (.getName ^java.io.File (io/file spec-file)) #"tla" "cfg"))]
-    (when true
+    (when verbose?
       (deps/describe [[:spec-file spec-file]
                       [:config-file config-file]]))
     (->>
@@ -122,8 +134,12 @@
       (println "Project created at" path)
       ;; create deps.edn and core.clj
       (spit deps-file (deps-config))
+      (when-not (or (.exists (io/as-file "ummoi.edn"))
+                    (.exists (io/as-file "ummoi.json")))
+        (error "must exist a `ummoi.edn` or `ummoi.json` file"))
       (spit core-file (core-form (clojure.edn/read-string (slurp "ummoi.edn"))
-                                 {:user-dir user-dir}))
+                                 {:user-dir user-dir
+                                  :verbose? (= (first command-line-args) "-v")}))
       ;; copy TLCOverrides.class so you don't need to call ummoi-runner twice (the first
       ;; one would be for operators compilation)
       (io/copy (io/input-stream (io/resource "ummoi-runner/classes/tlc2/overrides/TLCOverrides.class"))
@@ -139,8 +155,7 @@
                                        {:to-string? false
                                         :throw? true
                                         :show-errors? true})
-        (empty? ummoi-path) (do (println "ummoi is not at your path, please add it")
-                                (System/exit 1))
+        (empty? ummoi-path) (error "ummoi is not at your path, please add it")
         :else (deps/shell-command (->> ["cd" path "&&"
                                         ummoi-path "deps.exe"
                                         "-m" "ummoi-runner.core"]
