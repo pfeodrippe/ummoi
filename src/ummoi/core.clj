@@ -173,6 +173,24 @@
      :config-file-type config-file-type
      :verbose? (some #(contains? #{"-v" "--verbose"} %) command-line-args)}))
 
+(defn create-clj-project
+  [ummoi-config opts-map]
+  (let [path (.getPath ^java.io.File (fs/temp-dir "ummoi-"))
+        tlc-overrides-path (.getPath ^java.io.File (fs/temp-file ""))
+        _ (fs/mkdirs (str path "/src/ummoi_runner"))
+        _ (fs/mkdirs (str path "/classes/tlc2/overrides"))
+        deps-file (str path "/deps.edn")
+        core-file (str path "/src/ummoi_runner/core.clj")]
+    ;; create deps.edn and core.clj
+    (spit deps-file (deps-config))
+    (spit core-file (core-form ummoi-config opts-map))
+    ;; copy TLCOverrides.class so you don't need to call ummoi-runner twice (the first
+    ;; one would be for operators compilation)
+    (io/copy (io/input-stream (io/resource "ummoi-runner/classes/tlc2/overrides/TLCOverrides.class"))
+             (io/file tlc-overrides-path))
+    (fs/copy tlc-overrides-path (str path "/classes/tlc2/overrides/TLCOverrides.class"))
+    path))
+
 (defn -main
   [& [which :as command-line-args]]
   (if (= which "deps.exe")
@@ -182,45 +200,30 @@
                          (clojure.edn/read-string (slurp config-file))
                          (json/parse-string (slurp config-file) keyword))
           config-dir (.getParent ^java.io.File (.getCanonicalFile ^java.io.File config-file))
-          opts-map {:config-dir config-dir :verbose? verbose?}
-          path (.getPath ^java.io.File (fs/temp-dir "ummoi-"))
-          tlc-overrides-path (.getPath ^java.io.File (fs/temp-file ""))
-          _ (fs/mkdirs (str path "/src/ummoi_runner"))
-          _ (fs/mkdirs (str path "/classes/tlc2/overrides"))
-          deps-file (str path "/deps.edn")
-          core-file (str path "/src/ummoi_runner/core.clj")
-          from-java? (System/getProperty "sun.java.command")
-          ummoi-path (let [p (deps/where "./umm")]
-                       (if-not (empty? p)
-                         p
-                         (deps/where "um")))]
+          ummoi-path (deps/where "um")
+          path (create-clj-project ummoi-config {:config-dir config-dir :verbose? verbose?})]
       (when verbose?
         (println "Project created at" path)
-        (deps/describe [[:config-dir config-dir]
+        (deps/describe [[:ummoi-path ummoi-path]
+                        [:config-dir config-dir]
                         [:config-file config-file]
                         [:config-file-type config-file-type]
                         [:verbose? verbose?]
                         [:ummoi-config ummoi-config]
                         [:command-line-args command-line-args]]))
-      ;; create deps.edn and core.clj
-      (spit deps-file (deps-config))
-      (spit core-file (core-form ummoi-config opts-map))
-      ;; copy TLCOverrides.class so you don't need to call ummoi-runner twice (the first
-      ;; one would be for operators compilation)
-      (io/copy (io/input-stream (io/resource "ummoi-runner/classes/tlc2/overrides/TLCOverrides.class"))
-               (io/file tlc-overrides-path))
-      (fs/copy tlc-overrides-path (str path "/classes/tlc2/overrides/TLCOverrides.class"))
       ;; call the generated project using ummoi itself
       (cond
-        from-java? (deps/shell-command (->> ["cd" path "&&"
-                                             "deps.exe"
-                                             "-m" "ummoi-runner.core"]
-                                            (str/join " ")
-                                            (conj ["bash" "-c"]))
-                                       {:to-string? false
-                                        :throw? true
-                                        :show-errors? true})
-        (empty? ummoi-path) (error "ummoi is not at your path, please add it")
+        (System/getProperty "sun.java.command")
+        (deps/shell-command (->> ["cd" path "&&"
+                                  "deps.exe"
+                                  "-m" "ummoi-runner.core"]
+                                 (str/join " ")
+                                 (conj ["bash" "-c"]))
+                            {:to-string? false
+                             :throw? true
+                             :show-errors? true})
+
+        (empty? ummoi-path) (error "ummoi is not at your PATH, please add it")
         :else (deps/shell-command (->> ["cd" path "&&"
                                         ummoi-path "deps.exe"
                                         "-m" "ummoi-runner.core"]
