@@ -41,36 +41,39 @@
   []
   `{:deps ~'{org.clojure/clojure {:mvn/version "1.10.1"}
              pfeodrippe/tla-edn {:mvn/version "0.4.0"}
-             cheshire {:mvn/version "5.10.0"}}
+             cheshire {:mvn/version "5.10.0"}
+             clj-http {:mvn/version "3.10.1"}}
     :paths ["src" "classes"]})
 
 (defn op-form
   [name {:keys [:module :args :run]} {:keys [:user-dir]}]
-  (let [args (mapv symbol args)]
+  (let [args (mapv symbol args)
+        arg->value# (gensym)]
     `(spec/defop ~(symbol name) {:module ~module}
        ~args
-       ~(case (keyword (:type run))
-          :shell
-          `(let [env-vars# (->> (mapv (comp json/generate-string tla-edn/to-edn) ~args)
-                                (mapv (fn [arg-name# arg-value#]
-                                        [arg-name# arg-value#])
-                                      ~(mapv str args))
-                                (into {}))
-                 response# (sh/with-sh-dir ~user-dir
-                             (sh/with-sh-env env-vars# (apply sh/sh ~(:command run))))]
-             (if (empty? (:err response#))
-               (-> (:out response#)
-                   json/parse-string
-                   tla-edn/to-tla-value)
-               (do (println :OUT (:out response#))
-                   (println :ERR (:err response#))
-                   (pp/pprint
-                    {:message (str "Error running operator " ~name)
-                     :operator ~name
-                     :env-vars env-vars#})
-                   (throw (ex-info (str "Error running operator " ~name)
-                                   {:operator ~name
-                                    :env-vars env-vars#})))))))))
+       (let [~arg->value# (->> (mapv (comp json/generate-string tla-edn/to-edn) ~args)
+                            (mapv (fn [arg-name# arg-value#]
+                                    [arg-name# arg-value#])
+                                  ~(mapv str args))
+                            (into {}))]
+         ~(case (keyword (:type run))
+            :shell
+            `(let [env-vars# ~arg->value#
+                   response# (sh/with-sh-dir ~user-dir
+                               (sh/with-sh-env env-vars# (apply sh/sh ~(:command run))))]
+               (if (empty? (:err response#))
+                 (-> (:out response#)
+                     json/parse-string
+                     tla-edn/to-tla-value)
+                 (do (println :OUT (:out response#))
+                     (println :ERR (:err response#))
+                     (pp/pprint
+                      {:message (str "Error running operator " ~name)
+                       :operator ~name
+                       :env-vars env-vars#})
+                     (throw (ex-info (str "Error running operator " ~name)
+                                     {:operator ~name
+                                      :env-vars env-vars#}))))))))))
 
 (defn error
   [msg]
@@ -102,6 +105,7 @@
      `[(~'ns ummoi-runner.core
         ~'(:require
            [cheshire.core :as json]
+           [clj-http.client :as http]
            [clojure.java.shell :as sh]
            [clojure.pprint :as pp]
            [tla-edn.core :as tla-edn]

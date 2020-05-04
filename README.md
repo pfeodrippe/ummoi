@@ -2,12 +2,13 @@
 
 ## Examples
 
-### Calling python script (python 3)
+### Calling python 3 script
 
-### Make request to running python app (python 3)
+### Make request to running python 3 app
 
-Install flask
+Install flask and run the app
 
 ``` shell
 $ pip3 install flask
+$ FLASK_APP=resources/example_using_rest.py python3 -m flask run
 ```
