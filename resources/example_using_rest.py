@@ -8,9 +8,6 @@ vars_keys = ['c1', 'c2', 'account', 'receiver-new-amount', 'sender-new-amount',
 
 @app.route('/', methods = ['POST'])
 def transaction():
-    print(request.json['self'])
-    print(request.json['account'])
-    print(request.json['vars'])
     process = request.json['self']
     account = request.json['account']
     vars    = dict(zip(vars_keys, request.json['vars']))
