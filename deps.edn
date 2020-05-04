@@ -1,7 +1,8 @@
 {:aliases
  {:depstar {:extra-deps {seancorfield/depstar {:mvn/version "1.0.94"}}}
   :dev {:extra-deps {com.billpiel/sayid {:mvn/version "0.0.18"}
-                     pfeodrippe/tla-edn {:mvn/version "0.4.0"}}
+                     pfeodrippe/tla-edn {:mvn/version "0.4.0"}
+                     clj-http {:mvn/version "3.10.1"}}
         :extra-paths ["test"]}
   :test {:extra-deps {lambdaisland/kaocha {:mvn/version "0.0-554"}}
          :extra-paths ["test"]

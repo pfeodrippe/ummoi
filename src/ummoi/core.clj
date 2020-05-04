@@ -80,26 +80,21 @@
 
             :http-post
             `(let [form-params# ~arg->value#
-                   _# (pp/pprint {:form form-params#})
                    response# (http/post ~(:endpoint run)
-                                        (merge
-                                         {:form-params form-params#
-                                          :throw-exceptions false}
-                                         ~(:headers run)))]
-               (when (>= 299 (:status response#) 200)
-                 (pp/pprint {:response response#})
-                 (-> (:body response#)
-                     json/parse-string
-                     tla-edn/to-tla-value)
-                 #_(do (println :OUT (:out response#))
-                       (println :ERR (:err response#))
-                       (pp/pprint
-                        {:message (str "Error running operator " ~name)
-                         :operator ~name
-                         :env-vars env-vars#})
-                       (throw (ex-info (str "Error running operator " ~name)
-                                       {:operator ~name
-                                        :env-vars env-vars#}))))) )))))
+                                        {:form-params form-params#
+                                         :throw-exceptions false
+                                         :content-type :json
+                                         :as :json})]
+               (if (>= 299 (:status response#) 200)
+                 (tla-edn/to-tla-value (:body response#))
+                 (do (pp/pprint
+                      {:message (str "Error running operator " ~name)
+                       :operator ~name
+                       :form-params form-params#
+                       :error-response response#})
+                     (throw (ex-info (str "Error running operator " ~name)
+                                     {:operator ~name
+                                      :form-params form-params#}))))))))))
 
 (defn error
   [msg]
