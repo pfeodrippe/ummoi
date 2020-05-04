@@ -186,8 +186,8 @@
                              (.exists (io/as-file "ummoi.json")) (json/parse-string (slurp "ummoi.json") keyword)
                              :else (error "must exist a `ummoi.edn` or `ummoi.json` file")))]
       (when verbose?
-        (deps/describe [[:ummoi-config ummoi-config]]))
-      (println "Project created at" path)
+        (deps/describe [[:ummoi-config ummoi-config]])
+        (println "Project created at" path))
       ;; create deps.edn and core.clj
       (spit deps-file (deps-config))
       (spit core-file (core-form ummoi-config opts-map))
