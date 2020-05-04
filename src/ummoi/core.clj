@@ -37,7 +37,6 @@
         (update receiver + money)
         tla-edn/to-tla-value)))
 
-
 (defn deps-config
   []
   `{:deps ~'{org.clojure/clojure {:mvn/version "1.10.1"}
@@ -79,10 +78,10 @@
   (System/exit 1))
 
 (def json-example
-  "{\n  \"spec-file\" : \"dev/ummoi/resources/example.tla\",\n  \"operators\" : {\n    \"TransferMoney\" : {\n      \"module\" : \"example\",\n      \"args\" : [ \"self\", \"account\", \"vars\" ],\n      \"run\" : {\n        \"type\" : \"shell\",\n        \"command\" : [ \"dev/ummoi/resources/ex.py\" ]\n      }\n    }\n  }\n}")
+  "{\n  \"spec-file\" : \"dev/ummoi/resources/example.tla\",\n  \"operators\" : {\n    \"TransferMoney\" : {\n      \"module\" : \"example\",\n      \"args\" : [ \"self\", \"account\", \"vars\" ],\n      \"run\" : {\n        \"type\" : \"shell\",\n        \"command\" : [ \"dev/ummoi/resources/example_using_env.py\" ]\n      }\n    }\n  }\n}")
 
 (def edn-example
-  "{:spec-file \"dev/ummoi/resources/example.tla\"\n :operators\n {\"TransferMoney\"\n  {:module \"example\"\n   :args [self account vars]\n   :run {:type :shell\n         :command [\"dev/ummoi/resources/ex.py\"]}}}}\n\n\n")
+  "{:spec-file \"dev/ummoi/resources/example.tla\"\n :operators\n {\"TransferMoney\"\n  {:module \"example\"\n   :args [self account vars]\n   :run {:type :shell\n         :command [\"dev/ummoi/resources/example_using_env.py\"]}}}}\n\n\n")
 
 (defn core-form
   [{:keys [:spec-file :config-file :operators]} {:keys [:verbose?] :as opts}]
