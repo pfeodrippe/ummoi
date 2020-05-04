@@ -10,10 +10,9 @@
   (:import
    (java.io File)))
 
-#_(sh/sh)
 
-#_"um -c ummoi.edn example.tla"
-#_"um example.tla"                      ; same folder as configuration
+"um -c ummoi.edn example.tla"
+"um example.tla"                      ; same folder as configuration
 
 #_(def vars-keys
   [:c1 :c2 :account :receiver-new-amount :sender-new-amount :sender
@@ -104,19 +103,8 @@
    (map str)
    (str/join "\n")))
 
-(def ummoi-config
-  '{:spec-file "resources/example.tla"
-    #_ #_:config-file "example.cfg"
-    :operators
-    {"TransferMoney"
-     {:module "example"
-      :args [self account vars]
-      :run {:type :shell
-            :command ["/home/rafael/dev/ummoi/a.py"]}}}})
-
 (defn -main
   [& [which :as command-line-args]]
-  (println (System/getProperty "user.dir"))
   (if (= which "deps.exe")
     (apply deps/-main (rest command-line-args))
     (let [path (.getPath ^java.io.File (fs/temp-dir "ummoi-"))
@@ -127,14 +115,15 @@
           core-file (str path "/src/ummoi_runner/core.clj")
           from-java? (System/getProperty "sun.java.command")
           command-dir (.getPath ^java.io.File fs/*cwd*)
-          ummoi-path (let [p (deps/where "./ummoi")]
+          ummoi-path (let [p (deps/where "./umm")]
                        (if-not (empty? p)
                          p
-                         (deps/where "ummoi")))]
+                         (deps/where "um")))
+          user-dir (System/getProperty "user.dir")]
       (println "Project created at" path)
       ;; create deps.edn and core.clj
       (spit deps-file (deps-config))
-      (spit core-file (core-form ummoi-config))
+      (spit core-file (core-form (clojure.edn/read-string (slurp "ummoi.edn"))))
       ;; copy TLCOverrides.class so you don't need to call ummoi-runner twice (the first
       ;; one would be for operators compilation)
       (io/copy (io/input-stream (io/resource "ummoi-runner/classes/tlc2/overrides/TLCOverrides.class"))
@@ -153,7 +142,7 @@
         (empty? ummoi-path) (do (println "ummoi is not at your path, please define it")
                                 (System/exit 1))
         :else (deps/shell-command (->> ["cd" path "&&"
-                                        "~/dev/ummoi/ummoi" "deps.exe"
+                                        ummoi-path "deps.exe"
                                         "-m" "ummoi-runner.core"]
                                        (str/join " ")
                                        (conj ["bash" "-c"]))
