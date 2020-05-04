@@ -1,6 +1,7 @@
 {:aliases
  {:depstar {:extra-deps {seancorfield/depstar {:mvn/version "1.0.94"}}}
-  :dev {:extra-deps {com.billpiel/sayid {:mvn/version "0.0.18"}}
+  :dev {:extra-deps {com.billpiel/sayid {:mvn/version "0.0.18"}
+                     pfeodrippe/tla-edn {:mvn/version "0.4.0"}}
         :extra-paths ["test"]}
   :test {:extra-deps {lambdaisland/kaocha {:mvn/version "0.0-554"}}
          :extra-paths ["test"]
@@ -8,5 +9,6 @@
 
  :deps {org.clojure/clojure {:mvn/version "1.10.2-alpha1"}
         borkdude/deps.clj {:mvn/version "0.0.8"}
-        me.raynes/fs {:mvn/version "1.4.6"}}
+        me.raynes/fs {:mvn/version "1.4.6"}
+        cheshire {:mvn/version "5.10.0"}}
  :paths ["src" "resources"]}

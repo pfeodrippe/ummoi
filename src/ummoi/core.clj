@@ -2,11 +2,10 @@
   (:gen-class)
   (:require
    [borkdude.deps :as deps]
+   [cheshire.core :as json]
    [clojure.java.io :as io]
    [clojure.string :as str]
-   [me.raynes.fs :as fs]
-   #_[tla-edn.core :as tla-edn]
-   #_[tla-edn.spec :as spec])
+   [me.raynes.fs :as fs])
   (:import
    (java.io File)))
 
@@ -48,35 +47,42 @@
 
 (defn op-form
   [name {:keys [:module :args :run]} {:keys [:user-dir]}]
-  `(spec/defop ~(symbol name) {:module ~module}
-     ~args
-     ~(case (keyword (:type run))
-        :shell
-        `(let [env-vars# (->> (mapv (comp json/generate-string tla-edn/to-edn) ~args)
-                              (mapv (fn [arg-name# arg-value#]
-                                      [arg-name# arg-value#])
-                                    ~(mapv str args))
-                              (into {}))
-               response# (sh/with-sh-dir ~user-dir
-                           (sh/with-sh-env env-vars# (apply sh/sh ~(:command run))))]
-           (if (empty? (:err response#))
-             (-> (:out response#)
-                 json/parse-string
-                 tla-edn/to-tla-value)
-             (do (println :OUT (:out response#))
-                 (println :ERR (:err response#))
-                 (pp/pprint
-                  {:message (str "Error running operator " ~name)
-                   :operator ~name
-                   :env-vars env-vars#})
-                 (throw (ex-info (str "Error running operator " ~name)
-                                 {:operator ~name
-                                  :env-vars env-vars#}))))))))
+  (let [args (mapv symbol args)]
+    `(spec/defop ~(symbol name) {:module ~module}
+       ~args
+       ~(case (keyword (:type run))
+          :shell
+          `(let [env-vars# (->> (mapv (comp json/generate-string tla-edn/to-edn) ~args)
+                                (mapv (fn [arg-name# arg-value#]
+                                        [arg-name# arg-value#])
+                                      ~(mapv str args))
+                                (into {}))
+                 response# (sh/with-sh-dir ~user-dir
+                             (sh/with-sh-env env-vars# (apply sh/sh ~(:command run))))]
+             (if (empty? (:err response#))
+               (-> (:out response#)
+                   json/parse-string
+                   tla-edn/to-tla-value)
+               (do (println :OUT (:out response#))
+                   (println :ERR (:err response#))
+                   (pp/pprint
+                    {:message (str "Error running operator " ~name)
+                     :operator ~name
+                     :env-vars env-vars#})
+                   (throw (ex-info (str "Error running operator " ~name)
+                                   {:operator ~name
+                                    :env-vars env-vars#})))))))))
 
 (defn error
   [msg]
   (println "ERROR: " msg)
   (System/exit 1))
+
+(def json-example
+  "{\n  \"spec-file\" : \"dev/ummoi/resources/example.tla\",\n  \"operators\" : {\n    \"TransferMoney\" : {\n      \"module\" : \"example\",\n      \"args\" : [ \"self\", \"account\", \"vars\" ],\n      \"run\" : {\n        \"type\" : \"shell\",\n        \"command\" : [ \"dev/ummoi/resources/ex.py\" ]\n      }\n    }\n  }\n}")
+
+(def edn-example
+  "{:spec-file \"dev/ummoi/resources/example.tla\"\n :operators\n {\"TransferMoney\"\n  {:module \"example\"\n   :args [self account vars]\n   :run {:type :shell\n         :command [\"dev/ummoi/resources/ex.py\"]}}}}\n\n\n")
 
 (defn core-form
   [{:keys [:spec-file :config-file :operators]} {:keys [:verbose?] :as opts}]
@@ -85,8 +91,8 @@
     (or (nil? operators)
         (some nil? (mapcat (juxt :module :args :run) (vals operators))))
     (error (str "invalid `operators` key (\"/path/to/spec.tla\")\n"
-                "see example below: \n\n"
-                "{:spec-file \"dev/ummoi/resources/example.tla\"\n :operators\n {\"TransferMoney\"\n  {:module \"example\"\n   :args [self account vars]\n   :run {:type :shell\n         :command [\"dev/ummoi/resources/ex.py\"]}}}}\n\n\n")))
+                "see examples below: \n\nEDN\n" edn-example
+                "\n\nJSON\n" json-example)))
   (let [spec-file (.getAbsolutePath ^java.io.File (io/file spec-file))
         config-file (or config-file
                         (str/replace (.getName ^java.io.File (io/file spec-file)) #"tla" "cfg"))]
@@ -134,12 +140,18 @@
       (println "Project created at" path)
       ;; create deps.edn and core.clj
       (spit deps-file (deps-config))
-      (when-not (or (.exists (io/as-file "ummoi.edn"))
-                    (.exists (io/as-file "ummoi.json")))
-        (error "must exist a `ummoi.edn` or `ummoi.json` file"))
-      (spit core-file (core-form (clojure.edn/read-string (slurp "ummoi.edn"))
-                                 {:user-dir user-dir
-                                  :verbose? (= (first command-line-args) "-v")}))
+      (cond
+        (.exists (io/as-file "ummoi.edn"))
+        (spit core-file (core-form (clojure.edn/read-string (slurp "ummoi.edn"))
+                                   {:user-dir user-dir
+                                    :verbose? (= (first command-line-args) "-v")}))
+
+        (.exists (io/as-file "ummoi.json"))
+        (spit core-file (core-form (json/parse-string (slurp "ummoi.json") keyword)
+                                   {:user-dir user-dir
+                                    :verbose? (= (first command-line-args) "-v")}))
+
+        :else (error "must exist a `ummoi.edn` or `ummoi.json` file"))
       ;; copy TLCOverrides.class so you don't need to call ummoi-runner twice (the first
       ;; one would be for operators compilation)
       (io/copy (io/input-stream (io/resource "ummoi-runner/classes/tlc2/overrides/TLCOverrides.class"))
