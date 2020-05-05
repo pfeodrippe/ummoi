@@ -1,7 +1,7 @@
 #!/usr/bin/env bb
 
 ;; Cheers to Bob Herrmann o/
-;; Taken from https://github.com/bherrmann7/bb-common/blob/master/wee_httpd.bb
+;; Taken and modified to add request body parsing from https://github.com/bherrmann7/bb-common/blob/master/wee_httpd.bb
 
 (ns wee-httpd)
 
@@ -45,12 +45,11 @@
                 (recur))))))))))
 
 (defn start-web-server [request-handler]
+  (println "Server started \\o/")
   (.start (Thread. #(with-open
                       [server-socket (new ServerSocket 4444)]
                       (while true
-                        (let [_ (println "Serv: Awaiting connection on port " (.getLocalPort server-socket))
-                              client-socket (.accept server-socket)]
-                          (println "Serv: Accepted connection!")
+                        (let [client-socket (.accept server-socket)]
                           (create-worker-thread client-socket request-handler )))))))
 
 (def vars-keys
