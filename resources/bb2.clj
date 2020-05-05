@@ -70,8 +70,3 @@
 
 ;; Keep the shell script from returning.  When evaling the whole buffer, comment this out.
 (while true (Thread/sleep 1000))
-
-;; Tells emacs to jump into clojure mode.
-;; Local Variables:
-;; mode: clojure
-;; End:
