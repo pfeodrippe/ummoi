@@ -9,34 +9,6 @@
   (:import
    (java.io File)))
 
-#_(def vars-keys
-  [:c1 :c2 :account :receiver-new-amount :sender-new-amount :sender
-   :receiver :money :pc])
-
-#_(spec/defop TransferMoney {:module "example"}
-  [self account vars]
-  (let [self (tla-edn/to-edn self)
-        vars (zipmap vars-keys (tla-edn/to-edn vars))
-        sender (get-in vars [:sender self])
-        receiver (get-in vars [:receiver self])
-        money (get-in vars [:money self])]
-    (-> (tla-edn/to-edn account)
-        (update sender - money)
-        (update receiver + money)
-        tla-edn/to-tla-value)))
-
-#_(spec/defop TransferMoney {:module "example"}
-  [self account vars]
-  (let [self (tla-edn/to-edn self)
-        vars (zipmap vars-keys (tla-edn/to-edn vars))
-        sender (get-in vars [:sender self])
-        receiver (get-in vars [:receiver self])
-        money (get-in vars [:money self])]
-    (-> (tla-edn/to-edn account)
-        (update sender + money)
-        (update receiver + money)
-        tla-edn/to-tla-value)))
-
 (defn deps-config
   []
   `{:deps ~'{org.clojure/clojure {:mvn/version "1.10.1"}
