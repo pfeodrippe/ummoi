@@ -57,7 +57,7 @@
    :receiver :money :pc])
 
 (defn handler
-  [{self "self" account "account" vars "vars" :as body}]
+  [{self "self" account "account" vars "vars"}]
   (let [vars (zipmap vars-keys vars)
         sender (get-in vars [:sender self])
         receiver (get-in vars [:receiver self])
