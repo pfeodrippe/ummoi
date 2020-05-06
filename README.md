@@ -17,7 +17,7 @@ For clojure, check [tla-edn](https://github.com/pfeodrippe/tla-edn)).
 
 ## Usage
 
-*UmMói* first checks for a `ummoi.edn` or `ummoi.json` configuration file at the
+**UmMói** first checks for a `ummoi.edn` or `ummoi.json` configuration file at the
 directory where you run the `um` command.
 
 Configuration file examples are below.
