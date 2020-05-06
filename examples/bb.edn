@@ -2,6 +2,6 @@
  :operators
  {"TransferMoney"
   {:module "example"
-   :args [self account vars]
+   :args [self vars]
    :run {:type :http-post
          :endpoint "http://localhost:4444"}}}}

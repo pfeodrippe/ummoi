@@ -53,16 +53,15 @@
                           (create-worker-thread client-socket request-handler )))))))
 
 (def vars-keys
-  [:c1 :c2 :account :receiver-new-amount :sender-new-amount :sender
-   :receiver :money :pc])
+  [:c1 :c2 :account :sender :receiver :money :pc])
 
 (defn handler
-  [{self "self" account "account" vars "vars"}]
+  [{self "self" vars "vars"}]
   (let [vars (zipmap vars-keys vars)
         sender (get-in vars [:sender self])
         receiver (get-in vars [:receiver self])
         money (get-in vars [:money self])]
-    (-> account
+    (-> (:account vars)
         (update sender - money)
         (update receiver + money))))
 
