@@ -1,5 +1,20 @@
 # Um Mói
 
+Override TLA+ operators anywhere.
+
+> "Um mói de cana"
+> -- Someone drunk at Recife, northeast region of Brazil
+
+It means `a lot`, you can use it to create a lot of TLA+ override operators.
+
+## Goals
+- Easy to configure and use.
+- Simple installation, just download the binary for your OS.
+
+## Non-goals
+- Performance (if you want it, you should override the operator directly at JVM.
+For clojure, check [tla-edn](https://github.com/pfeodrippe/tla-edn)).
+
 ## Examples
 
 Check `examples` directory.
