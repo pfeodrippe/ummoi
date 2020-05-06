@@ -7,6 +7,8 @@ Override TLA+ operators anywhere.
 
 It means _a lot_, you can use it to create a lot of TLA+ override operators.
 
+<a href="https://asciinema.org/a/327129"><img src="images/ummoi.svg" width="1366px"></a>
+
 ## Goals
 - Easy to configure and use.
 - Simple installation, just download the binary for your OS.
