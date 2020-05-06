@@ -1,0 +1,13 @@
+{
+    "spec-file" : "example.tla",
+    "operators" : {
+        "TransferMoney" : {
+            "module" : "example",
+            "args" : [ "self", "vars" ],
+            "run" : {
+                "type" : "shell",
+                "command" : [ "./example_using_env.py" ]
+            }
+        }
+    }
+}
