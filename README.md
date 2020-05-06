@@ -87,5 +87,7 @@ $ bb examples/example_bb.clj
 $ um -c examples/bb.edn
 ```
 
-## Help
-- Add windows support
+## Todo (by me or by you)
+- [ ] Add windows support
+- [ ] Add OSX release
+- [ ] Add CI to build releases automatically

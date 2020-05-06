@@ -1,0 +1,46 @@
+#!/usr/bin/env bash
+
+# based heavily at https://github.com/borkdude/babashka/blob/master/install
+
+set -euo pipefail
+
+print_help() {
+    echo "Installs latest version of UmMói. Installation directory defaults to /usr/local/bin."
+    echo -e
+    echo "Usage:"
+    echo "installer.sh [<dir>]"
+    exit 1
+}
+
+default_install_dir="/usr/local/bin"
+install_dir=$default_install_dir
+install_dir_opt=${1:-}
+if [ "$install_dir_opt" ]; then
+    install_dir="$install_dir_opt"
+fi
+
+download_dir=/tmp
+
+latest_release="$(curl -sL https://raw.githubusercontent.com/pfeodrippe/ummoi/master/resources/UMMOI_RELEASED_VERSION)"
+
+case "$(uname -s)" in
+    Linux*)     platform=linux;;
+    # Darwin*)    platform=macos;; NOT YET
+esac
+
+download_url="https://github.com/pfeodrippe/ummoi/releases/download/v$latest_release/ummoi-$latest_release-$platform-amd64.zip"
+
+cd "$download_dir"
+echo -e "Downloading $download_url."
+curl -o "ummoi-$latest_release-$platform-amd64.zip" -sL "https://github.com/pfeodrippe/ummoi/releases/download/v$latest_release/ummoi-$latest_release-$platform-amd64.zip"
+unzip -qqo "ummoi-$latest_release-$platform-amd64.zip"
+rm "ummoi-$latest_release-$platform-amd64.zip"
+
+cd "$install_dir"
+if [ -f ummoi ]; then
+    echo "Moving $install_dir/um to $install_dir/um.old"
+fi
+
+mv -f "$download_dir/um" "$PWD/um"
+
+echo "Successfully installed bb in $install_dir."
