@@ -30,6 +30,8 @@ $ chmod +x install-ummoi && ./install-ummoi
 **UmMói** first checks for a `ummoi.edn` or `ummoi.json` configuration file at the
 directory where you run the `um` command.
 
+It's a binary, but you must have Java to run the spec with TLC.
+
 Configuration file examples are below.
 
 EDN
