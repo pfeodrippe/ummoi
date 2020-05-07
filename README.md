@@ -99,7 +99,8 @@ $ bb examples/example_bb.clj
 $ um -c examples/bb.edn
 ```
 
-## Todo (by me or by you)
+## TODO (by me or by you)
+- [ ] Generate JSON/EDN tracing (then you would not needed to run TLC everytime, you could run your file and check its output)
 - [ ] Add windows support
 - [ ] Add OSX release
 - [ ] Add CI to build releases automatically
