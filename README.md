@@ -100,7 +100,9 @@ $ um -c examples/bb.edn
 ```
 
 ## TODO (by me or by you)
-- [ ] Generate JSON/EDN tracing (then you would not needed to run TLC everytime, you could run your file and check its output)
 - [ ] Add windows support
 - [ ] Add OSX release
 - [ ] Add CI to build releases automatically
+
+## Dreams
+- [ ] Generate JSON/EDN tracing for each operator for each run (then you would not needed to run TLC everytime, you could run your file and check its output)
